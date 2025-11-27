@@ -1,0 +1,9 @@
+#str="gokul is good boy"
+#words=str.split()
+#no_words=len(words)
+#print(no_words)
+str="gokul is good boy"
+str=str.split()
+str=[len(i) for i in str]
+l=max(str)
+print(l)
