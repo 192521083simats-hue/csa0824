@@ -2,30 +2,26 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier, export_text
 from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score
 
 # Load dataset
-file_path = "human_ai_interaction_errors_dataset project 1.csv"
-df = pd.read_csv(file_path)
+df = pd.read_csv("human_ai_interaction_errors_dataset project 1.csv")
 
-# Encode categorical features
-label_encoders = {}
+# Encode categorical columns
 for column in df.select_dtypes(include=['object']).columns:
-    le = LabelEncoder()
-    df[column] = le.fit_transform(df[column])
-    label_encoders[column] = le
+    df[column] = LabelEncoder().fit_transform(df[column])
 
 # Separate features and target
 X = df.drop("Interaction_Error", axis=1)
 y = df["Interaction_Error"]
 
-# Train-test split
+# Use very small training data (to reduce accuracy)
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.3, random_state=42
+    X, y, test_size=0.8, random_state=1
 )
 
-# Train Rule-Based Model (CN2-like)
-model = DecisionTreeClassifier(max_depth=4)
+# Very shallow tree (weak rule model)
+model = DecisionTreeClassifier(max_depth=1)  # Very simple model
 model.fit(X_train, y_train)
 
 # Predictions
@@ -33,13 +29,9 @@ y_pred = model.predict(X_test)
 
 # Accuracy
 accuracy = accuracy_score(y_test, y_pred)
-print("Accuracy:", accuracy * 100, "%")
+print("Low Accuracy:", accuracy * 100, "%")
 
-# Classification Report
-print("\nClassification Report:\n")
-print(classification_report(y_test, y_pred))
-
-# Print Generated Rules (Like CN2 Rules)
+# Print Rules
 rules = export_text(model, feature_names=list(X.columns))
-print("\nGenerated Rules:\n")
+print("\nGenerated Simple Rules:\n")
 print(rules)
