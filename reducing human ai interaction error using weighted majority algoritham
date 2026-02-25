@@ -1,0 +1,59 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score
+
+# Load dataset
+df = pd.read_csv("human_ai_interaction_errors_dataset project 1.csv")
+
+# Encode categorical columns
+for column in df.select_dtypes(include=['object']).columns:
+    df[column] = LabelEncoder().fit_transform(df[column])
+
+# Separate features and target
+X = df.drop("Interaction_Error", axis=1)
+y = df["Interaction_Error"]
+
+# Train-Test Split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42
+)
+
+# Create Weak Learners
+model1 = DecisionTreeClassifier(max_depth=1)
+model2 = DecisionTreeClassifier(max_depth=2)
+model3 = DecisionTreeClassifier(max_depth=3)
+
+# Train Models
+model1.fit(X_train, y_train)
+model2.fit(X_train, y_train)
+model3.fit(X_train, y_train)
+
+# Initial Weights
+weights = np.array([0.4, 0.3, 0.3])
+
+# Predictions
+pred1 = model1.predict(X_test)
+pred2 = model2.predict(X_test)
+pred3 = model3.predict(X_test)
+
+# Weighted Voting
+final_pred = []
+
+for i in range(len(X_test)):
+    vote = (
+        weights[0] * pred1[i] +
+        weights[1] * pred2[i] +
+        weights[2] * pred3[i]
+    )
+    
+    if vote >= 0.5:
+        final_pred.append(1)
+    else:
+        final_pred.append(0)
+
+# Accuracy
+accuracy = accuracy_score(y_test, final_pred)
+print("Weighted Majority Accuracy:", accuracy * 100, "%")
