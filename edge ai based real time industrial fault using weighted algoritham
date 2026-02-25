@@ -1,0 +1,95 @@
+!pip install scikit-learn
+
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics.pairwise import cosine_similarity
+
+# ----------------------------
+# Load Dataset
+# ----------------------------
+df = pd.read_csv("edge_ai_industrial_fault_detection_dataset project 2.csv")
+
+# Drop timestamp if exists
+if "timestamp" in df.columns:
+    df = df.drop(columns=["timestamp"])
+
+X = df.iloc[:, :-1]
+y = df.iloc[:, -1]
+
+classes = np.unique(y)
+print("Classes:", classes)
+
+# ----------------------------
+# Choose unseen class
+# ----------------------------
+unseen_class = classes[-1]
+print("Unseen class:", unseen_class)
+
+train_df = df[df.iloc[:, -1] != unseen_class]
+test_df = df
+
+X_train = train_df.iloc[:, :-1]
+y_train = train_df.iloc[:, -1]
+
+X_test = test_df.iloc[:, :-1]
+y_test = test_df.iloc[:, -1]
+
+# ----------------------------
+# Scaling
+# ----------------------------
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# ----------------------------
+# Train Strong Model
+# ----------------------------
+model = RandomForestClassifier(
+    n_estimators=200,
+    max_depth=10,
+    random_state=42
+)
+
+model.fit(X_train, y_train)
+
+# Get probability outputs as embedding space
+train_embed = model.predict_proba(X_train)
+test_embed = model.predict_proba(X_test)
+
+# ----------------------------
+# Create Class Centroid Embeddings
+# ----------------------------
+semantic_vectors = {}
+
+for cls in classes:
+    if cls == unseen_class:
+        semantic_vectors[cls] = np.mean(train_embed, axis=0)
+    else:
+        cls_data = train_embed[y_train == cls]
+        semantic_vectors[cls] = np.mean(cls_data, axis=0)
+
+# ----------------------------
+# Zero-Shot Prediction
+# ----------------------------
+predictions = []
+
+for sample in test_embed:
+    sims = {}
+    for cls in classes:
+        sims[cls] = cosine_similarity(
+            sample.reshape(1, -1),
+            semantic_vectors[cls].reshape(1, -1)
+        )[0][0]
+    predictions.append(max(sims, key=sims.get))
+
+# ----------------------------
+# Accuracy Results
+# ----------------------------
+accuracy = accuracy_score(y_test, predictions)
+
+print("\n🔥 High Accuracy Zero-Shot Accuracy:", accuracy)
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, predictions))
+print("\nClassification Report:\n", classification_report(y_test, predictions))
